@@ -1,0 +1,34 @@
+{
+  "name": "anon-share",
+  "version": "1.0.0",
+  "description": "Anonymous photo/video sharing with local cryptographic identity, hash-chained ledger, and on-server NSFW moderation",
+  "private": true,
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "setup": "node scripts/fetch-model.js && node scripts/set-admin-password.js"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^3.1.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "better-sqlite3": "^13.0.1",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.1",
+    "ffmpeg-static": "^5.3.0",
+    "helmet": "^8.3.0",
+    "multer": "^2.2.0",
+    "nsfwjs": "^4.3.0",
+    "sharp": "^0.35.3"
+  },
+  "optionalDependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.1": true,
+    "core-js@3.29.1": true,
+    "ffmpeg-static@5.3.0": true
+  }
+}

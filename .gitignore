@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Secrets -- never commit real credentials. Keep .env.example tracked.
+.env
+.env.*
+!.env.example
+
+# Runtime data: SQLite database and its WAL/SHM files
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# User-uploaded media -- content, not source. Directory structure is
+# recreated automatically by server/index.js on startup.
+uploads/live/*
+uploads/pending/*
+uploads/quarantine/*
+!uploads/live/.gitkeep
+!uploads/pending/.gitkeep
+!uploads/quarantine/.gitkeep
+
+# Editor / tooling
+.vscode/
+.idea/
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Logs
+npm-debug.log*
+*.log

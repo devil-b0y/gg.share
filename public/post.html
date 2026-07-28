@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Post · gg.share</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="rail">
+    <div class="brand"><span class="lamp"></span>gg<span class="tld">.share</span></div>
+    <nav class="rail-nav">
+      <a href="/"><span class="glyph">▤</span> Feed</a>
+      <a href="#" id="railIdentity"><span class="glyph">◈</span> Identity</a>
+    </nav>
+    <div class="rail-foot">
+      <button class="id-card" id="idCard" type="button">
+        <span class="row">
+          <span class="avatar" id="myAvatar"></span>
+          <span>
+            <span class="nick" id="myNick">…</span>
+            <span class="label" style="display:block">You</span>
+          </span>
+        </span>
+        <span class="addr" id="myAddrFull"></span>
+      </button>
+    </div>
+  </aside>
+
+  <header class="topbar">
+    <a href="/" class="brand"><span class="lamp"></span>gg<span class="tld">.share</span></a>
+    <button class="chip" id="chipIdentity" type="button">
+      <span class="avatar" id="myAvatarSm"></span>
+      <span id="myNickSm">…</span>
+    </button>
+  </header>
+
+  <main class="feed-col">
+    <a href="/" class="detail-back">← Back to feed</a>
+    <div id="postContainer"></div>
+    <div id="commentsSection"></div>
+  </main>
+</div>
+
+<!-- Identity -->
+<div class="overlay" id="identityModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="identityTitle">
+    <div class="sheet-head">
+      <h2 id="identityTitle">Your identity</h2>
+      <button class="x" data-close="identityModal" aria-label="Close">✕</button>
+    </div>
+    <p class="hint-text" style="margin-top:0">
+      Your keypair was generated in this browser and never leaves it. The address below
+      is derived from your public key, so posts and comments are provably yours without
+      revealing who you are.
+    </p>
+    <div class="field">
+      <label class="label" for="idNick">Display name</label>
+      <input type="text" id="idNick" readonly>
+    </div>
+    <div class="field">
+      <label class="label" for="idAddr">Address</label>
+      <input type="text" id="idAddr" readonly>
+    </div>
+    <button class="btn btn-quiet btn-block" id="exportKey" style="margin-bottom:8px">Copy recovery key</button>
+    <button class="btn btn-outline btn-block" id="importKey">Restore from recovery key</button>
+    <p class="hint-text" id="identityMsg" style="margin:12px 0 0"></p>
+  </div>
+</div>
+
+<!-- Report -->
+<div class="overlay" id="reportModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <div class="sheet-head">
+      <h2 id="reportTitle">Report this post</h2>
+      <button class="x" data-close="reportModal" aria-label="Close">✕</button>
+    </div>
+    <div class="field">
+      <span class="label">Reason</span>
+      <div class="reasons" id="reasons">
+        <label><input type="radio" name="reason" value="adult"><span>Adult content</span></label>
+        <label><input type="radio" name="reason" value="violence"><span>Violence</span></label>
+        <label><input type="radio" name="reason" value="spam"><span>Spam</span></label>
+        <label><input type="radio" name="reason" value="illegal"><span>Illegal</span></label>
+        <label><input type="radio" name="reason" value="other"><span>Something else</span></label>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="reportNote">Details — optional</label>
+      <textarea id="reportNote" maxlength="500" placeholder="What should a moderator know?"></textarea>
+    </div>
+    <p class="hint-text" id="reportError" style="margin:0 0 10px;color:var(--ink)"></p>
+    <button class="btn btn-primary btn-block" id="submitReport">Send report</button>
+  </div>
+</div>
+
+<script type="module" src="/js/post.js"></script>
+</body>
+</html>

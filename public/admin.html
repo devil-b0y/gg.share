@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · gg.share</title>
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<div id="loginScreen" class="login-wrap">
+  <div class="login-card">
+    <h2 style="margin-top:0">Admin login</h2>
+    <div class="field">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword">
+    </div>
+    <button class="btn p" id="loginBtn" style="width:100%">Log in</button>
+    <div class="muted" id="loginError" style="margin-top:10px;color:var(--danger)"></div>
+  </div>
+</div>
+
+<div id="app" class="layout hidden">
+  <nav class="side">
+    <h1>gg.share admin</h1>
+
+    <div class="nav-group-label">Overview</div>
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="analytics">Analytics</button>
+
+    <div class="nav-group-label">Content</div>
+    <button data-view="live">Live posts</button>
+    <button data-view="review">Review queue</button>
+    <button data-view="blacklist">Blacklist</button>
+    <button data-view="reports">Reports</button>
+
+    <div class="nav-group-label">People</div>
+    <button data-view="reputation">Reputation</button>
+    <button data-view="bans">Bans</button>
+
+    <div class="nav-group-label">Platform</div>
+    <button data-view="ledger">Ledger monitor</button>
+    <button data-view="storage">Storage</button>
+    <button data-view="security">Security center</button>
+    <button data-view="audit">Audit log</button>
+    <button data-view="settings">Settings</button>
+
+    <button id="logoutBtn" class="logout">Log out</button>
+  </nav>
+  <main class="content">
+    <div id="view"></div>
+  </main>
+</div>
+
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>

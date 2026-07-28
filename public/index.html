@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Share photos and videos anonymously. No account, no email, no tracking.">
+<title>gg.share</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Desktop rail -->
+  <aside class="rail">
+    <div class="brand"><span class="lamp"></span>gg<span class="tld">.share</span></div>
+
+    <nav class="rail-nav">
+      <a href="/" class="is-active"><span class="glyph">▤</span> Feed</a>
+      <a href="#" id="railUpload"><span class="glyph">＋</span> New post</a>
+      <a href="#" id="railIdentity"><span class="glyph">◈</span> Identity</a>
+    </nav>
+
+    <div class="rail-tags" id="railTags" hidden>
+      <span class="label">Trending tags</span>
+      <div class="tag-list" id="tagList"></div>
+    </div>
+
+    <div class="rail-foot">
+      <button class="id-card" id="idCard" type="button">
+        <span class="row">
+          <span class="avatar" id="myAvatar"></span>
+          <span>
+            <span class="nick" id="myNick">…</span>
+            <span class="label" style="display:block">You</span>
+          </span>
+        </span>
+        <span class="addr" id="myAddrFull"></span>
+      </button>
+
+      <div class="chain-strip" id="chainStrip" title="Every post, like and comment is written to a hash-chained ledger">
+        <span class="pip"></span><span id="chainText">checking ledger…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Mobile topbar -->
+  <header class="topbar">
+    <div class="brand"><span class="lamp"></span>gg<span class="tld">.share</span></div>
+    <button class="chip" id="chipIdentity" type="button">
+      <span class="avatar" id="myAvatarSm"></span>
+      <span id="myNickSm">…</span>
+    </button>
+  </header>
+
+  <main class="feed-col">
+    <div class="feed-controls">
+      <div class="sorts" id="sorts" role="tablist">
+        <button role="tab" data-sort="latest" class="is-on">Latest</button>
+        <button role="tab" data-sort="trending">Trending</button>
+        <button role="tab" data-sort="top">Most liked</button>
+        <button role="tab" data-sort="discussed">Discussed</button>
+      </div>
+      <div class="search-row">
+        <input type="search" id="search" placeholder="Search posts…" autocomplete="off" aria-label="Search posts">
+        <select id="kindFilter" aria-label="Filter by post type">
+          <option value="">All</option>
+          <option value="text">Text</option>
+          <option value="media">Photo &amp; video</option>
+        </select>
+      </div>
+      <div class="active-filter" id="activeFilter" hidden></div>
+    </div>
+
+    <div class="feed" id="feed" aria-busy="true"></div>
+
+    <div id="feedFoot"></div>
+    <div id="sentinel" style="height:1px"></div>
+  </main>
+</div>
+
+<button class="fab" id="fab" type="button">＋ Post</button>
+
+<!-- Upload -->
+<div class="overlay" id="uploadModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+    <div class="sheet-head">
+      <h2 id="uploadTitle">New post</h2>
+      <button class="x" data-close="uploadModal" aria-label="Close">✕</button>
+    </div>
+
+    <div class="mode-tabs" id="modeTabs" role="tablist">
+      <button role="tab" data-mode="text" class="is-on">Text</button>
+      <button role="tab" data-mode="media">Photo / video</button>
+    </div>
+
+    <!-- Text mode -->
+    <div id="modeText">
+      <div class="field">
+        <textarea id="textBody" maxlength="500" rows="5"
+                  placeholder="What's on your mind? Use #hashtags to make it findable."></textarea>
+        <div class="counter-row">
+          <span class="hint-text">Hashtags become clickable filters.</span>
+          <span class="counter" id="textCounter">0 / 500</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media mode -->
+    <div id="modeMedia" hidden>
+      <div class="field">
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a photo or video">
+          <div id="dropIdle">
+            Drop a photo or video, or click to browse
+            <span class="hint">JPG · PNG · GIF · WEBP up to 20 MB — MP4 · WEBM · MOV up to 100 MB</span>
+          </div>
+          <div class="drop-preview" id="dropPreview" hidden></div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+      </div>
+
+      <div class="field">
+        <label class="label" for="caption">Caption — optional</label>
+        <textarea id="caption" maxlength="500" placeholder="Say something…"></textarea>
+      </div>
+    </div>
+
+    <p class="hint-text" id="uploadStatus" style="margin:0 0 12px"></p>
+    <button class="btn btn-primary btn-block" id="submitUpload">Post anonymously</button>
+    <p class="hint-text" style="margin:12px 0 0">
+      Location data and camera info are stripped before anything is stored.
+      Your post is signed by your device key — never by an account.
+    </p>
+  </div>
+</div>
+
+<!-- Identity -->
+<div class="overlay" id="identityModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="identityTitle">
+    <div class="sheet-head">
+      <h2 id="identityTitle">Your identity</h2>
+      <button class="x" data-close="identityModal" aria-label="Close">✕</button>
+    </div>
+
+    <p class="hint-text" style="margin-top:0">
+      Your keypair was generated in this browser and never leaves it. The address below
+      is derived from your public key, so posts and comments are provably yours without
+      revealing who you are.
+    </p>
+
+    <div class="field">
+      <label class="label" for="idNick">Display name</label>
+      <input type="text" id="idNick" readonly>
+    </div>
+    <div class="field">
+      <label class="label" for="idAddr">Address</label>
+      <input type="text" id="idAddr" readonly>
+    </div>
+
+    <button class="btn btn-quiet btn-block" id="exportKey" style="margin-bottom:8px">Copy recovery key</button>
+    <button class="btn btn-outline btn-block" id="importKey">Restore from recovery key</button>
+    <p class="hint-text" id="identityMsg" style="margin:12px 0 0"></p>
+  </div>
+</div>
+
+<!-- Report -->
+<div class="overlay" id="reportModal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <div class="sheet-head">
+      <h2 id="reportTitle">Report this post</h2>
+      <button class="x" data-close="reportModal" aria-label="Close">✕</button>
+    </div>
+
+    <div class="field">
+      <span class="label">Reason</span>
+      <div class="reasons" id="reasons">
+        <label><input type="radio" name="reason" value="adult"><span>Adult content</span></label>
+        <label><input type="radio" name="reason" value="violence"><span>Violence</span></label>
+        <label><input type="radio" name="reason" value="spam"><span>Spam</span></label>
+        <label><input type="radio" name="reason" value="illegal"><span>Illegal</span></label>
+        <label><input type="radio" name="reason" value="other"><span>Something else</span></label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="label" for="reportNote">Details — optional</label>
+      <textarea id="reportNote" maxlength="500" placeholder="What should a moderator know?"></textarea>
+    </div>
+
+    <p class="hint-text" id="reportError" style="margin:0 0 10px;color:var(--ink)"></p>
+    <button class="btn btn-primary btn-block" id="submitReport">Send report</button>
+    <p class="hint-text" style="margin:12px 0 0">
+      A moderator reviews every report. The post stays up until they decide.
+    </p>
+  </div>
+</div>
+
+<script type="module" src="/js/feed.js"></script>
+</body>
+</html>
