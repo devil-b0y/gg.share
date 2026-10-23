@@ -1,0 +1,4 @@
+{
+  "//": "Browser modules are ES modules. This marker lets Node (and so the unit tests) load them directly; the root package.json is CommonJS for the server code.",
+  "type": "module"
+}
