@@ -21,21 +21,18 @@ function audit(req, action, target, detail) {
 
 // --- auth -------------------------------------------------------------
 
-router.post('/login', adminLoginLimiter, (req, res) => {
+router.post('/login', adminLoginLimiter, async (req, res) => {
   const { password } = req.body || {};
   const iphash = hashIp(clientIp(req));
-  const ok = auth.checkAdminPassword(password || '');
+  // A non-string password (`{"password": {...}}`) must fail as a wrong
+  // password, not reach scrypt and throw.
+  const ok = typeof password === 'string' && await auth.checkAdminPassword(password);
   db.prepare('INSERT INTO admin_login_attempts (iphash, created_at, success) VALUES (?, ?, ?)')
     .run(iphash, Date.now(), ok ? 1 : 0);
   if (!ok) return res.status(401).json({ error: 'invalid password' });
 
   const token = auth.createSession();
-  res.cookie(auth.COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: req.secure,
-    maxAge: auth.SESSION_TTL_MS
-  });
+  res.cookie(auth.COOKIE_NAME, token, auth.sessionCookieOptions(req));
   audit(req, 'login', null, null);
   res.json({ ok: true });
 });
@@ -58,13 +55,16 @@ router.use(auth.requireAdmin);
 // Serves media that isn't in the public /media static mount (pending
 // review or quarantined) so the admin can see what they're moderating.
 // Restricted to admin sessions only, and confined to the uploads tree.
+// Every stored name is the content's own SHA-256 plus a known suffix, so the
+// filename can be matched exactly rather than merely filtered for dangerous
+// characters -- nothing that isn't a name this server itself wrote can get
+// past the pattern. The resolved path is still re-checked against each
+// directory below as a second line of defence.
+const MEDIA_NAME = /^[0-9a-f]{64}(\.thumb\.jpg|\.webp|\.mp4|\.jpg)$/;
+
 router.get('/media/:file', (req, res) => {
   const file = req.params.file;
-  // Stored names are "<sha256>.webp" / "<sha256>.thumb.jpg" / "<sha256>.mp4",
-  // so letters beyond hex must be allowed for the extension. Path separators
-  // and ".." are rejected outright, and the resolved path is re-checked
-  // against the directory below, so traversal can't escape the uploads tree.
-  if (!/^[A-Za-z0-9._-]+$/.test(file) || file.includes('..')) return res.status(400).end();
+  if (!MEDIA_NAME.test(file)) return res.status(400).end();
   for (const dir of [LIVE_DIR, QUARANTINE_DIR, path.join(__dirname, '..', '..', 'uploads', 'pending')]) {
     const full = path.resolve(dir, file);
     if (!full.startsWith(path.resolve(dir) + path.sep)) continue;
@@ -278,16 +278,30 @@ router.delete('/bans/:kind/:value', (req, res) => {
 // --- settings -----------------------------------------------------------
 
 router.get('/settings', (req, res) => {
-  res.json({ settings: config.getAll(), defaults: config.DEFAULTS });
+  res.json({ settings: config.getAll(), defaults: config.DEFAULTS, rules: config.RULES });
 });
 
 router.post('/settings', (req, res) => {
   const updates = req.body || {};
-  for (const [key, value] of Object.entries(updates)) {
-    if (!(key in config.DEFAULTS)) continue;
-    config.set(key, value);
+  if (typeof updates !== 'object' || Array.isArray(updates)) {
+    return res.status(400).json({ error: 'expected an object of settings' });
   }
-  audit(req, 'update_settings', null, updates);
+
+  // Validate the whole batch first, then apply. A half-applied update would
+  // leave the moderation thresholds in a combination the admin never chose.
+  const accepted = [];
+  for (const key of Object.keys(updates)) {
+    if (!config.isKnownSetting(key)) return res.status(400).json({ error: `unknown setting: ${key}` });
+    if (!config.isValid(key, updates[key])) {
+      const rule = config.RULES[key];
+      const range = rule.type === 'boolean' ? 'true or false' : `${rule.type} between ${rule.min} and ${rule.max}`;
+      return res.status(400).json({ error: `invalid value for ${key} (expected ${range})` });
+    }
+    accepted.push(key);
+  }
+
+  for (const key of accepted) config.set(key, updates[key]);
+  audit(req, 'update_settings', null, Object.fromEntries(accepted.map((k) => [k, updates[k]])));
   res.json({ ok: true, settings: config.getAll() });
 });
 

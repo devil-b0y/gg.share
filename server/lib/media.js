@@ -49,10 +49,19 @@ function sha256File(filePath) {
 /** Re-encodes an image to WebP, discarding all metadata and baking in
  * EXIF orientation before stripping it. Handles animated GIF/WebP input by
  * preserving frames. Returns the sanitized buffer. */
+// A few kilobytes of PNG can declare a canvas of billions of pixels; the
+// decoder allocates for the declared size, not the compressed size. Every
+// sharp pipeline that touches an upload has to carry this cap, or the one
+// that doesn't becomes the way in.
+const MAX_INPUT_PIXELS = 60_000_000;
+
 async function sanitizeImage(inputBuffer) {
-  const img = sharp(inputBuffer, { animated: true, limitInputPixels: 60_000_000 });
+  const img = sharp(inputBuffer, { animated: true, limitInputPixels: MAX_INPUT_PIXELS });
   const meta = await img.metadata();
-  const pipeline = sharp(inputBuffer, { animated: !!meta.pages && meta.pages > 1 })
+  const pipeline = sharp(inputBuffer, {
+    animated: !!meta.pages && meta.pages > 1,
+    limitInputPixels: MAX_INPUT_PIXELS
+  })
     .rotate() // bake in EXIF orientation, then it's discarded like the rest
     .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true });
   return pipeline.webp({ quality: 85 }).toBuffer();
@@ -61,7 +70,7 @@ async function sanitizeImage(inputBuffer) {
 /** Generates a small JPEG thumbnail (first frame only) from an image
  * buffer -- used for the feed grid regardless of the source format. */
 async function imageThumbnail(inputBuffer) {
-  return sharp(inputBuffer, { animated: false })
+  return sharp(inputBuffer, { animated: false, limitInputPixels: MAX_INPUT_PIXELS })
     .resize(480, 480, { fit: 'cover' })
     .jpeg({ quality: 72 })
     .toBuffer();

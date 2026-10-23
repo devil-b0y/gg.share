@@ -136,6 +136,20 @@ CREATE TABLE IF NOT EXISTS upload_events (
 
 CREATE INDEX IF NOT EXISTS idx_upload_events_iphash_time ON upload_events(iphash, created_at);
 
+-- Single-use nonces for signed client actions. Every signed payload carries
+-- a `ts` and a `nonce`; the nonce is burned here on first use so a captured
+-- envelope (a like, comment, report, text post) cannot be replayed. Rows are
+-- short-lived -- they only need to outlive the freshness window enforced in
+-- server/lib/replay.js -- and are pruned on write.
+CREATE TABLE IF NOT EXISTS used_nonces (
+  addr          TEXT NOT NULL,
+  nonce         TEXT NOT NULL,
+  expires_at    INTEGER NOT NULL,
+  PRIMARY KEY (addr, nonce)
+) WITHOUT ROWID;
+
+CREATE INDEX IF NOT EXISTS idx_used_nonces_expiry ON used_nonces(expires_at);
+
 CREATE TABLE IF NOT EXISTS settings (
   key           TEXT PRIMARY KEY,
   value         TEXT NOT NULL

@@ -5,10 +5,8 @@ const express = require('express');
 const db = require('../db');
 const config = require('../config');
 const { moveFile, QUARANTINE_DIR } = require('../lib/queue');
-const { verifySignedPayload } = require('../lib/crypto');
 const { appendBlock } = require('../lib/ledger');
-const { isBanned } = require('../lib/bans');
-const { hashIp, clientIp } = require('../lib/iphash');
+const { authenticateAction, toRowId } = require('../lib/signed');
 
 const router = express.Router();
 const REASONS = ['adult', 'violence', 'spam', 'illegal', 'other'];
@@ -39,24 +37,26 @@ function massReportBlacklist(postId) {
 
 // POST /api/reports -- body: { addr, pubkey, signature, payload:{type:'report', postId, reason, note, ts, nonce} }
 router.post('/', (req, res) => {
-  const { addr, pubkey, signature, payload } = req.body || {};
-  const verification = verifySignedPayload({ addr, pubkey, signature, payload });
-  if (!verification.ok) return res.status(401).json({ error: verification.error });
-  if (payload.type !== 'report') return res.status(400).json({ error: 'payload type mismatch' });
-  if (isBanned('addr', addr)) return res.status(403).json({ error: 'this address is banned' });
+  const action = authenticateAction(req, res, 'report');
+  if (!action) return;
+  const { addr, payload, iphash } = action;
+
   if (!REASONS.includes(payload.reason)) return res.status(400).json({ error: 'invalid reason' });
 
-  const post = db.prepare("SELECT id, status FROM posts WHERE id = ?").get(payload.postId);
+  const postId = toRowId(payload.postId);
+  if (!postId) return res.status(400).json({ error: 'invalid post id' });
+
+  const post = db.prepare('SELECT id, status FROM posts WHERE id = ?').get(postId);
   if (!post) return res.status(404).json({ error: 'post not found' });
 
-  const existing = db.prepare('SELECT id FROM reports WHERE post_id = ? AND addr = ?').get(payload.postId, addr);
+  const existing = db.prepare('SELECT id FROM reports WHERE post_id = ? AND addr = ?').get(postId, addr);
   if (existing) return res.status(409).json({ error: 'you already reported this post' });
 
-  const iphash = hashIp(clientIp(req));
+  const note = typeof payload.note === 'string' ? payload.note.slice(0, 500) : '';
   const info = db.prepare(`
     INSERT INTO reports (post_id, addr, reason, note, iphash, created_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(payload.postId, addr, payload.reason, (payload.note || '').slice(0, 500), iphash, Date.now());
+  `).run(postId, addr, payload.reason, note, iphash, Date.now());
 
   appendBlock({ type: 'report', addr, refId: info.lastInsertRowid, payload });
 
@@ -66,12 +66,12 @@ router.post('/', (req, res) => {
   // Only a mass pile-on trips the automatic blacklist below.
   const { count } = db.prepare(
     'SELECT COUNT(*) AS count FROM reports WHERE post_id = ? AND resolved = 0'
-  ).get(payload.postId);
+  ).get(postId);
 
   const blacklistAt = config.get('report_auto_blacklist_count');
   let autoBlacklisted = false;
   if (count >= blacklistAt && post.status === 'live') {
-    massReportBlacklist(payload.postId);
+    massReportBlacklist(postId);
     autoBlacklisted = true;
   }
 

@@ -55,6 +55,28 @@ const adminLoginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again later.' }
 });
 
+// Blanket ceiling for the admin API. Login has its own much tighter limit;
+// this one bounds everything behind the session check, so a stolen or
+// guessed-at session cookie can't be used to hammer the panel's heavier
+// endpoints (analytics, reputation, chain verification) unthrottled. Set
+// well above what a human clicking through the panel generates.
+const adminApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  keyGenerator: ipHashKeyGenerator,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many admin requests. Please slow down.' }
+});
+
+/** Picks a limiter by HTTP method. Routers that serve both a public feed and
+ * a write endpoint need the generous read budget for GETs without handing
+ * that same budget to POSTs. */
+function byMethod({ read, write }) {
+  return (req, res, next) =>
+    (req.method === 'GET' || req.method === 'HEAD' ? read : write)(req, res, next);
+}
+
 const insertUploadEvent = db.prepare('INSERT INTO upload_events (iphash, created_at) VALUES (?, ?)');
 const countUploadEvents = db.prepare(
   'SELECT COUNT(*) AS n FROM upload_events WHERE iphash IN (?, ?) AND created_at > ?'
@@ -85,5 +107,7 @@ module.exports = {
   writeLimiter,
   reportLimiter,
   adminLoginLimiter,
+  adminApiLimiter,
+  byMethod,
   uploadQuota
 };
